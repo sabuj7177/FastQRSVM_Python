@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="8fcb8c22-22f3-49aa-ab7d-994ce04be734" name="Default Changelist" comment="" />
+    <list default="true" id="8fcb8c22-22f3-49aa-ab7d-994ce04be734" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DistributedDualAscentMethodWithMeka.py" beforeDir="false" afterPath="$PROJECT_DIR$/DistributedDualAscentMethodWithMeka.py" afterDir="false" />
+    </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -9,7 +13,37 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="FileEditorManager">
-    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300" />
+    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/DistributedDualAscentMethodWithMeka.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="222">
+              <caret line="395" column="35" selection-start-line="395" selection-start-column="35" selection-end-line="395" selection-end-column="35" />
+              <folding>
+                <element signature="e#0#61#0" expanded="true" />
+                <element signature="e#1404#1497#0" />
+                <element signature="e#1521#1602#0" />
+                <element signature="e#1643#2045#0" />
+                <element signature="e#2093#2376#0" />
+                <element signature="e#2411#2855#0" />
+                <element signature="e#2933#3109#0" />
+                <element signature="e#3144#3320#0" />
+                <element signature="e#3360#3501#0" />
+                <element signature="e#3616#3952#0" />
+                <element signature="e#3987#4352#0" />
+                <element signature="e#4422#5105#0" />
+                <element signature="e#3542#3878#0" />
+                <element signature="e#3921#4286#0" />
+                <element signature="e#4364#4859#0" />
+                <element signature="e#5366#6344#0" />
+                <element signature="e#9299#10147#0" />
+                <element signature="e#5913#6494#0" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+    </leaf>
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -22,8 +56,12 @@
     <findStrings>
       <find>Da</find>
       <find>Data</find>
-      <find>Data</find>
+      <find>New</find>
+      <find>ite</find>
     </findStrings>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
@@ -34,22 +72,39 @@
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds" extendedState="7">
+  <component name="ProjectFrameBounds" extendedState="6">
     <option name="x" value="96" />
     <option name="y" value="1" />
     <option name="width" value="1750" />
     <option name="height" value="970" />
   </component>
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectView">
     <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="ProjectPane" />
       <pane id="Scope" />
+      <pane id="ProjectPane">
+        <subPane>
+          <expand>
+            <path>
+              <item name="pySpark" type="b2602c69:ProjectViewProjectNode" />
+              <item name="pySpark" type="47feb1d3:ProjectViewModuleNode" />
+            </path>
+            <path>
+              <item name="pySpark" type="b2602c69:ProjectViewProjectNode" />
+              <item name="pySpark" type="47feb1d3:ProjectViewModuleNode" />
+              <item name="pySpark" type="462c0819:PsiDirectoryNode" />
+            </path>
+          </expand>
+          <select />
+        </subPane>
+      </pane>
     </panes>
   </component>
   <component name="PropertiesComponent">
+    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PythonContentEntriesConfigurable" />
   </component>
@@ -216,25 +271,41 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="-8" y="-8" width="1936" height="1056" extended-state="6" />
+    <editor active="true" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.2028451" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.18282403" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
-      <window_info anchor="bottom" id="Run" order="2" weight="0.32936078" />
+      <window_info active="true" anchor="bottom" id="Run" order="2" sideWeight="0.49947312" visible="true" weight="0.32936078" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="6" />
       <window_info anchor="bottom" id="Version Control" order="7" />
       <window_info anchor="bottom" id="Terminal" order="8" weight="0.32936078" />
-      <window_info anchor="bottom" id="Event Log" order="9" side_tool="true" />
+      <window_info anchor="bottom" id="Event Log" order="9" sideWeight="0.50052685" side_tool="true" visible="true" weight="0.32936078" />
       <window_info anchor="bottom" id="Python Console" order="10" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
     </layout>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/DistributedDualAscentMethodWithMeka.py</url>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/DistributedDualAscentMethodWithMeka.py</url>
+          <line>207</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/../PlayingWithMLALgo/DifferentModelWithIris.py">
@@ -263,15 +334,27 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/DistributedDualAscentMethodWithMeka.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="364">
-          <caret line="188" column="23" lean-forward="true" selection-start-line="188" selection-start-column="23" selection-end-line="188" selection-end-column="23" />
+        <state relative-caret-position="222">
+          <caret line="395" column="35" selection-start-line="395" selection-start-column="35" selection-end-line="395" selection-end-column="35" />
           <folding>
-            <element signature="e#0#42#0" expanded="true" />
-            <element signature="e#1049#1451#0" />
-            <element signature="e#1500#1783#0" />
-            <element signature="e#2339#2515#0" />
-            <element signature="e#2550#2726#0" />
-            <element signature="e#2766#2907#0" />
+            <element signature="e#0#61#0" expanded="true" />
+            <element signature="e#1404#1497#0" />
+            <element signature="e#1521#1602#0" />
+            <element signature="e#1643#2045#0" />
+            <element signature="e#2093#2376#0" />
+            <element signature="e#2411#2855#0" />
+            <element signature="e#2933#3109#0" />
+            <element signature="e#3144#3320#0" />
+            <element signature="e#3360#3501#0" />
+            <element signature="e#3616#3952#0" />
+            <element signature="e#3987#4352#0" />
+            <element signature="e#4422#5105#0" />
+            <element signature="e#3542#3878#0" />
+            <element signature="e#3921#4286#0" />
+            <element signature="e#4364#4859#0" />
+            <element signature="e#5366#6344#0" />
+            <element signature="e#9299#10147#0" />
+            <element signature="e#5913#6494#0" />
           </folding>
         </state>
       </provider>

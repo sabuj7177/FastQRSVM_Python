@@ -2,6 +2,7 @@ from pyspark import SparkConf, SparkContext, AccumulatorParam
 from pyspark.sql import SparkSession
 import math
 import numpy as np
+from functools import partial
 
 # filename = "a9a_1000/a9a_train_1000_40_with_label.txt"
 # sc = SparkContext(master="local",appName="meka")
@@ -17,6 +18,7 @@ C = 1.0
 threshold = 0.001
 maxIteration = 100
 numOfPartialData = int(math.ceil(totalData/numOfClusters))
+optStepSize = (math.floor(1.0 / (learnRate * C)) - 0.5) * learnRate
 thresholdSpark = 10
 trainDataPath = "a9a_1000/a9a_train_1000_40_with_label.txt"
 testDataPath = "a9a_1000/a9a_test_1000_40.txt"
@@ -38,6 +40,9 @@ class VectorAccumulatorParam(AccumulatorParam):
 
 recordCountInClusters = sc.accumulator(np.zeros((numOfClusters,1)), VectorAccumulatorParam())
 Rgatherac = sc.accumulator(np.zeros((numOfClusters*nCols,nCols)), VectorAccumulatorParam())
+xAcc = sc.accumulator(np.zeros((totalData, 1)), VectorAccumulatorParam())
+alphaList = sc.accumulator(np.zeros((totalData, 1)), VectorAccumulatorParam())
+betaList = sc.accumulator(np.zeros((totalData, 1)), VectorAccumulatorParam())
 
 # This part is for HouseHolder QRDecomposition
 def column_convertor(x):
@@ -54,7 +59,6 @@ def get_norm(x):
     """
     return np.sqrt(np.sum(np.square(x)))
 
-
 def householder_transformation(v):
     """
     Returns Householder matrix for vector v
@@ -70,7 +74,6 @@ def householder_transformation(v):
     u = u / norm2
     H = np.identity(size_of_v) - ((2 * np.matmul(np.transpose(u), u)) / np.matmul(u, np.transpose(u)))
     return H, u
-
 
 def qr_step_factorization(q, r, iter, n):
     """
@@ -125,9 +128,156 @@ def inputFuncTestLabel(dataLine):
     X[0, 0] = float(splitBySpace[0])
     return X
 
-def filter_out_2_from_partition(num, list_of_lists):
-    partitionedMatrix = np.zeros((numOfPartialData+thresholdSpark,nCols))
+def LocalQtX(localReflector, subX):
+    (rowInCluster,colInCluster) = subX.shape
+    for k in range(nCols):
+        value = np.matmul(np.transpose(localReflector[0:rowInCluster,k]),subX[0:rowInCluster,0])
+        temp = (2*value)*localReflector[0:rowInCluster,k]
+        subX[0:rowInCluster,0] = (subX[0:rowInCluster,0]-temp).ravel()
+    return subX[0:rowInCluster,0]
+
+def GlobalQtX(globalReflector, subX):
+    (rowInReflector,colInReflector) = globalReflector.shape
+    for k in range(nCols):
+        value = np.matmul(np.transpose(globalReflector[0:rowInReflector,k]),subX[0:rowInReflector,0])
+        temp = (2*value)*globalReflector[0:rowInReflector,k]
+        subX[0:rowInReflector,0] = (subX[0:rowInReflector,0]-temp).ravel()
+    return subX[0:rowInReflector,0]
+
+def LocalQtXPerCluster(num, list_of_lists,fullX, recordCountInClusters):
+    partitionedMatrix = np.zeros((numOfPartialData + thresholdSpark, nCols))
     final_iterator = [5]
+    currentRow = 0
+    for x in list_of_lists:
+        partitionedMatrix[currentRow, :] = x
+        currentRow += 1
+    reflector = partitionedMatrix[0:currentRow, :]
+    rowInCluster = int(recordCountInClusters[num][0])
+    previousRows = 0
+    for x in range(num):
+        previousRows += int(recordCountInClusters[x][0])
+    subX = fullX[previousRows:previousRows+rowInCluster,:]
+    updatedSubX = LocalQtX(reflector,subX)
+    temp = np.zeros((totalData, 1))
+    temp[previousRows:previousRows+rowInCluster, 0] = updatedSubX.ravel()
+    xAcc.add(temp)
+    return iter(final_iterator)
+
+
+def Dist_QtX(x, globalReflector, localReflector, recordCountInClusters):
+    dummy = localReflector.mapPartitionsWithIndex(
+        partial(LocalQtXPerCluster, fullX=x, recordCountInClusters=recordCountInClusters))
+    dummy.count()
+    global xAcc
+    finalX = xAcc.value
+    xAcc = sc.accumulator(np.zeros((totalData, 1)), VectorAccumulatorParam())
+
+    partialX = np.zeros((numOfClusters*nCols, 1))
+    fullIterator = 0
+    partialIterator = 0
+    for k in range(numOfClusters):
+        temp = finalX[fullIterator:fullIterator+nCols,0]
+        partialX[partialIterator:partialIterator+nCols,0] = temp.ravel()
+        fullIterator += int(recordCountInClusters[k][0])
+        partialIterator += nCols
+    updatedPartialX = GlobalQtX(globalReflector, partialX)
+    rowNumberCount = 0
+    partialIterator = 0
+    for k in range(numOfClusters):
+        finalX[rowNumberCount:rowNumberCount+nCols,0] = updatedPartialX[partialIterator:partialIterator+nCols].ravel()
+        rowNumberCount += int(recordCountInClusters[k][0])
+        partialIterator += nCols
+    return finalX
+
+def LocalQX(localReflector, subX):
+    (rowInCluster,colInCluster) = subX.shape
+    for k in range(nCols-1, -1,-1):
+        value = np.matmul(np.transpose(localReflector[0:rowInCluster,k]),subX[0:rowInCluster,0])
+        temp = (2*value)*localReflector[0:rowInCluster,k]
+        subX[0:rowInCluster,0] = (subX[0:rowInCluster,0]-temp).ravel()
+    return subX[0:rowInCluster,0]
+
+def GlobalQX(globalReflector, subX):
+    (rowInReflector,colInReflector) = globalReflector.shape
+    for k in range(nCols-1, -1,-1):
+        value = np.matmul(np.transpose(globalReflector[0:rowInReflector,k]),subX[0:rowInReflector,0])
+        temp = (2*value)*globalReflector[0:rowInReflector,k]
+        subX[0:rowInReflector,0] = (subX[0:rowInReflector,0]-temp).ravel()
+    return subX[0:rowInReflector,0]
+
+def LocalQXPerCluster(num, list_of_lists,fullX, recordCountInClusters):
+    partitionedMatrix = np.zeros((numOfPartialData + thresholdSpark, nCols))
+    final_iterator = [5]
+    currentRow = 0
+    for x in list_of_lists:
+        partitionedMatrix[currentRow, :] = x
+        currentRow += 1
+    reflector = partitionedMatrix[0:currentRow, :]
+    rowInCluster = int(recordCountInClusters[num][0])
+    previousRows = 0
+    for x in range(num):
+        previousRows += int(recordCountInClusters[x][0])
+    subX = fullX[previousRows:previousRows+rowInCluster,:]
+    updatedSubX = LocalQX(reflector,subX)
+    temp = np.zeros((totalData, 1))
+    temp[previousRows:previousRows+rowInCluster, 0] = updatedSubX.ravel()
+    xAcc.add(temp)
+    return iter(final_iterator)
+
+
+def Dist_QX(x, globalReflector, localReflector, recordCountInClusters):
+    partialX = np.zeros((numOfClusters*nCols, 1))
+    fullIterator = 0
+    partialIterator = 0
+    for k in range(numOfClusters):
+        temp = x[fullIterator:fullIterator+nCols,0]
+        partialX[partialIterator:partialIterator+nCols,0] = temp.ravel()
+        fullIterator += int(recordCountInClusters[k][0])
+        partialIterator += nCols
+    updatedPartialX = GlobalQX(globalReflector, partialX)
+    rowNumberCount = 0
+    partialIterator = 0
+    for k in range(numOfClusters):
+        x[rowNumberCount:rowNumberCount+nCols,0] = updatedPartialX[partialIterator:partialIterator+nCols].ravel()
+        rowNumberCount += int(recordCountInClusters[k][0])
+        partialIterator += nCols
+    dummy = localReflector.mapPartitionsWithIndex(partial(LocalQXPerCluster,fullX = x,recordCountInClusters = recordCountInClusters))
+    dummy.count()
+    global xAcc
+    updatedX = xAcc.value
+    xAcc = sc.accumulator(np.zeros((totalData, 1)), VectorAccumulatorParam())
+    return updatedX
+
+def AlphaBetaUpdate(F, betaCapOld, Ecap):
+    alphaCap = np.matmul(np.linalg.inv(F),Ecap-betaCapOld)
+    betaCap = betaCapOld - (optStepSize * alphaCap)
+    return alphaCap, betaCap
+
+def AlphaBetaUpdatePerCluster(num, list_of_lists,betaBroadcast, enBroadcast, recordCountInClusters):
+    for x in list_of_lists:
+        F = x
+    #partitionedMatrix = np.zeros((numOfPartialData + thresholdSpark, nCols))
+    final_iterator = [5]
+    rowInCluster = int(recordCountInClusters[num][0])
+    previousRows = 0
+    for x in range(num):
+        previousRows += int(recordCountInClusters[x][0])
+    fullBeta = betaBroadcast.value
+    fullEn = enBroadcast.value
+    subBeta = fullBeta[previousRows:previousRows+rowInCluster,:]
+    subEn = fullEn[previousRows:previousRows+rowInCluster,:]
+    alphaCap, betaCap = AlphaBetaUpdate(F, subBeta, subEn)
+    temp = np.zeros((totalData, 1))
+    temp[previousRows:previousRows+rowInCluster, 0] = alphaCap.ravel()
+    alphaList.add(temp)
+    temp = np.zeros((totalData, 1))
+    temp[previousRows:previousRows+rowInCluster, 0] = betaCap.ravel()
+    betaList.add(temp)
+    return iter(final_iterator)
+
+def QRDecompositionPerCluster(num, list_of_lists):
+    partitionedMatrix = np.zeros((numOfPartialData+thresholdSpark,nCols))
+    #final_iterator = [5]
     currentRow = 0
     for x in list_of_lists:
         partitionedMatrix[currentRow,:] = x
@@ -145,16 +295,43 @@ def filter_out_2_from_partition(num, list_of_lists):
 def dummyFunc(s):
     return s
 
+def TestData(alphaTotalMat, finalR, testDataMat, testLabelMat):
+    weightMat = np.matmul(np.transpose(finalR), alphaTotalMat[0:nCols,:])
+    transposeWeightMat = np.transpose(weightMat)
+    result = np.matmul(transposeWeightMat,np.transpose(testDataMat))
+    correct = 0
+    wrong = 0
+    correntPos = 0
+    correntNeg = 0
+    wrongPos = 0
+    wrongNeg = 0
+    for i in range(testrow):
+        if result[0][i] >0:
+            if testLabelMat[i][0] == testLabelPositive:
+                correct += 1
+                correntPos += 1
+            else:
+                wrong += 1
+                wrongPos += 1
+        else:
+            if testLabelMat[i][0] == testLabelNegative:
+                correct += 1
+                correntNeg += 1
+            else:
+                wrong += 1
+                wrongNeg += 1
+
+    accuracy = (correct *100)/ testrow
+    print("corrent is :" + str(accuracy))
+    print("wrong is :" + str(accuracy))
+    print("Accuracy is :" + str(accuracy))
+
+
 def main():
     #sc = SparkContext(master="local", appName="meka")
-
-
-
-
     spark = SparkSession(sc)
 
     #global numOfPartialData
-    optStepSize = (math.floor(1.0 / (learnRate * C)) - 0.5) * learnRate
     #numOfPartialData = math.ceil(totalData/numOfClusters)
     #print(numOfPartialData)
 
@@ -185,10 +362,62 @@ def main():
 
     # rdd = sc.parallelize(range(1, 4)).map(lambda x: (x, "a" * x))
     # print(rdd.collect())
-    filtered_lists = trainingData.mapPartitionsWithIndex(filter_out_2_from_partition)
-    filtered_lists.count()
-    print(recordCountInClusters.value)
-    print(Rgatherac.value)
+    localReflectors = trainingData.mapPartitionsWithIndex(QRDecompositionPerCluster)
+    localReflectors.count()
+    #print(recordCountInClusters.value)
+    #print(Rgatherac.value)
+    RgatherMat = Rgatherac.value
+    Q, finalR, globalReflector = QR_Factorization(RgatherMat, numOfClusters*nCols, nCols)
+    recordCountInClustersMat = recordCountInClusters.value
+
+    betaCapmat = np.full((totalData,1),1.0)
+    betaBroadCast = sc.broadcast(betaCapmat)
+
+    Ecap = Dist_QtX(np.full((totalData,1),-1.0),globalReflector,localReflectors,recordCountInClustersMat)
+    enBroadCast = sc.broadcast(Ecap)
+
+    fullRfinalTransposeMat = np.transpose(finalR)
+    RgRgTmat = np.matmul(finalR,fullRfinalTransposeMat)
+    Fs = []
+    F = np.zeros((int(recordCountInClustersMat[0][0]), int(recordCountInClustersMat[0][0])))
+    F[0:nCols,0:nCols] = (-1)*RgRgTmat
+    for i in range(int(recordCountInClustersMat[0][0])):
+        F[i][i] += (-1.0/(2*C))
+    Fs.append(F)
+    for p in range(numOfClusters-1):
+        F = np.zeros((int(recordCountInClustersMat[p+1][0]), int(recordCountInClustersMat[p+1][0])))
+        for i in range(int(recordCountInClustersMat[p+1][0])):
+            F[i][i] += (-1.0 / (2 * C))
+        Fs.append(F)
+
+    FsRDD = sc.parallelize(Fs, numOfClusters)
+    prevBetaCap = np.full((totalData,1),1.0)
+
+    for it in range(maxIteration): 
+        global alphaList
+        alphaList = sc.accumulator(np.zeros((totalData, 1)), VectorAccumulatorParam())
+        global betaList
+        betaList = sc.accumulator(np.zeros((totalData, 1)), VectorAccumulatorParam())
+        dummy = FsRDD.mapPartitionsWithIndex(partial(AlphaBetaUpdatePerCluster, betaBroadcast = betaBroadCast, enBroadcast = enBroadCast, recordCountInClusters = recordCountInClustersMat))
+        dummy.count()
+        Betamat = Dist_QX(betaList.value, globalReflector, localReflectors, recordCountInClustersMat)
+        for i in range(totalData):
+            if Betamat[i][0] < 0:
+                Betamat[i][0] = 0
+        betaCapmat = Dist_QtX(Betamat, globalReflector, localReflectors, recordCountInClustersMat)
+        diffBeta = betaCapmat - prevBetaCap
+        error = np.linalg.norm(diffBeta,ord=1)
+        prevBetaCap = betaCapmat
+        print("####################Here is Iteration : "+str(it)+" ############################")
+        print("This is error :"+str(error))
+        betaBroadCast = sc.broadcast(betaCapmat)
+        if it% 5 == 0:
+            TestData(alphaList.value, finalR, testdatamat, testlabelmat)
+        if error<threshold:
+            break
+
+    TestData(alphaList.value, finalR, testdatamat, testlabelmat)
+
     '''dummyMap = filtered_lists.map(dummyFunc)
     print(dummyMap.collect())
     dummyReduce = dummyMap.reduce(lambda a, b: a + b)
